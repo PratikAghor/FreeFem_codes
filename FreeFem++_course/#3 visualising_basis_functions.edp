@@ -1,0 +1,13 @@
+//code to visualize basis functions
+mesh Th=square(2,2); 
+fespace Vh(Th,P1); 
+Vh u; 
+int i,n=Vh.ndof;
+cout<<"ndof="<<n<<endl;
+u=0; 
+for (i=0;i<n;i++)    //	all degree of freedom
+{
+u[][i]=1;                       //	the basic function i
+plot(u,ps="basis"+i+".jpg"); 
+u[][i]=0;               //	reset
+}

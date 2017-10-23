@@ -1,0 +1,46 @@
+//circle with hole: Try this
+//border C1(t=0,2*pi){x=5*cos(t); y=5*sin(t);}
+//border C2(t=2*pi,0){x=cos(t);y=sin(t);}
+
+//ellipse: "Or" this!
+//border C3(t=0,2*pi){x=cos(t); y=0.5*sin(t);}
+
+//square domain: "Or" this!
+//border a(t=0,1){x=t;y=0;}
+//border b(t=0,1){x=1;y=t;}
+//border c(t=1,0){x=t;y=1;}
+//border d(t=1,0){x=0;y=t;}
+/////////////////////////////////////
+//Once the border is defined, build a mesh on
+//respective boundaries
+//mesh Th=buildmesh
+//(C1(20)+C2(20)); //That means using this line
+//(C3(20));		//Or this!
+//(a(100)+b(100)+c(100)+d(100));//or this!
+//plot(Th, ps="myfirstmesh.jpg"); //plot and see how your mesh looks like.
+////////////////////////////////////////////////////////////////////////////////
+//overlapping boundaries: Schwarz-overlap
+
+int inside = 0; // inside boundary
+int outside = 1;//outside boundary
+border a(t=1,2){x=t;y=0;label=outside;};
+border b(t=0,1){x=2;y=t;label=outside;};
+border c(t=2,0){x=t ;y=1;label=outside;};
+border d(t=1,0){x = 1-t; y = t;label=inside;};
+border e(t=0, pi/2){ x= cos(t); y = sin(t);label=inside;};
+border e1(t=pi/2, 2*pi){ x= cos(t); y = sin(t);label=outside;};
+int n=4;
+mesh th = buildmesh( a(5*n) + b(5*n) + c(10*n) + d(5*n));
+mesh TH = buildmesh( e(5*n) + e1(25*n) );
+plot(th,TH,wait=1,ps="s.jpg");
+
+////////////////////////////////////////////////////////////////////////////////////
+//Adaptmesh
+//mesh Th1=adaptmesh(Th);
+//plot(Th1,wait=1);
+////////////////////////////////////////////////////////////////////////////////////
+//Splitmesh
+//mesh Th2=splitmesh(Th,1+5*((x-0.5)^2+(y-0.5)^2));
+
+//plot(Th2);
+////////////////////////////////////////////////////////////////////////////////////

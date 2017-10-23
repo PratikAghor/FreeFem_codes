@@ -1,0 +1,42 @@
+//how to extract data in FreeFem++
+border a(t=0,1){x=t;y=0;}
+border b(t=0,1){x=1;y=t;}
+border c(t=1,0){x=t;y=1;}
+border d(t=1,0){x=0;y=t;}
+
+ mesh Th = buildmesh (a(50)+b(50)+c(50)+d(50));
+plot(Th,ps="mesh3.jpg");
+fespace Vh(Th,P1);
+ Vh u,v; // defines u and v as piecewise-P1 continuous functions
+ func f=x*y;// definition of a called f function
+real c1=2;
+solve Diffusion(u,v,solver=LU) = // defines the PDE
+int2d(Th)(dx(u)*dx(v) + dy(u)*dy(v)+dx(u)*dy(v)+dx(v)*dy(u)) // bilinear part
+- int2d(Th)( f*v) // right hand side
++ on(a,b,c,d,u=0) ; // Dirichlet boundary condition on all 4 sides
+plot(u, ps="dirichlet_all.jpg",fill=1);
+
+/////////////////////////////////////////////////////////////////////////////////
+//Extracting nodes and data
+
+Vh[int] xh(2);
+
+xh[0] = x;
+xh[1] = y;
+real n=Vh.ndof;
+real[int] Gx(n),Gy(n);
+ofstream f1("u.txt");
+for (int j = 0; j < n; j++)
+{
+    cout << j;		
+
+		Gx[j]=xh[0][][j];
+		Gy[j]= xh[1][][j];
+
+		f1 <<"x= "<<Gx[j]<< " y= "<<Gy[j]<<" u="<< u[][j]<<endl;
+}
+//////////////////////////////////////////////////////////////////////////////
+
+
+
+

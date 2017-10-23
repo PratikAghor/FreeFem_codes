@@ -1,0 +1,1 @@
+These are some FreeFem++ codes for a harmonically driven cavity. The implementation was successful for Newtonian and Bingham fluids. I wrote these codes with a friend while doing a summer internship at IIT-Madras.  

@@ -1,0 +1,122 @@
+//Navier Stokes
+ //******************************* Constants Definition *********************************
+ real Re = 100.0;
+ real nu = 0.001;
+ real Lx = 5;
+ real Ly = 3;
+real t=0;
+ real dt = 1;
+ real D = 0.1;
+ real eps = 1e-10;
+ //**************************************************************************************
+
+ //******************************* Geometry Definition **********************************
+
+  //**************************************************************************************
+ border c1(t=0,1){x=t*Lx; y=0;}		//bottom
+ border c2(t=0,1){x=Lx; y=t*Ly;}	//right
+ border c3(t=1,0){x=t*Lx; y=Ly;}	//top
+ border c4(t=1,0){x=0; y=t*Ly;}		//incoming
+ border c5(t=2*pi,0){x=Lx/5+(D/2)*cos(t); y=Ly/2+(D/2)*sin(t);}//bluff body
+ border c6(t=2*pi,0){x=4*Lx/5+(D/2)*cos(t); y=Ly/2+(D/2)*sin(t);}//bluff body
+
+
+
+ //******************************* Meshing and Finite ELement Space *********************
+//mesh Th1=buildmesh(c1(80));
+ mesh Th = buildmesh(c1(80)+c2(40)+c3(80)+c4(80)+c5(80)+c6(80));
+//mesh Th=Th1+Th2; 
+plot(Th,WhiteBackground=0,ps="mesh.jpg");
+
+fespace Uh(Th, P2);
+ fespace Vh(Th, P1);
+ Uh u, v, uh, vh, uold, vold;
+ Vh p, ph;
+ Vh uplot, vplot, vort;
+ //************************************************************************************** 
+ // Velocity field is initialized by steady state solution
+ problem steadystokes([u,v,p], [uh,vh,ph]) =
+ int2d(Th)( nu*dx(u)*dx(uh) + nu*dy(u)*dy(uh) )
+ +int2d(Th)(nu*dx(v)*dx(vh) + nu*dy(v)*dy(vh) )
+ -int2d(Th)(p*dx(uh))
+ -int2d(Th)(p*dy(vh))
+ -int1d(Th, c2)(nu*dx(u)*N.x*uh+nu*dy(u)*N.y*uh)
+ -int1d(Th, c2)(nu*dx(v)*N.x*vh+nu*dy(v)*N.y*vh)
+ +int2d(Th)(dx(u)*ph + dy(v)*ph)
+ +int2d(Th)(eps*p*ph)
+ +on(c5,c6, u=0, v=0)
+ +on(c1,c3,c4, u=1, v=0);
+ //
+ steadystokes;
+ uplot = u;
+ vplot = v;
+ plot([uplot,vplot]);
+ uold = u;
+ vold = v;
+ 
+ //**************************************************************************************
+ // Now go for unsteady Navier−Stokes equations .
+ 
+ int it = 0;
+ problem navierstokes([u,v,p], [uh,vh,ph], init=it,
+ solver=sparsesolver) =
+ int2d(Th)(u*uh/dt)
+ -int2d(Th)(convect([uold,vold], -dt, uold)*uh/dt)
+ +int2d(Th)(v*vh/dt)
+ -int2d(Th)(convect([uold,vold], -dt, vold)*vh/dt)
+ +int2d(Th)(nu*dx(u)*dx(uh) + nu*dy(u)*dy(uh) )
+ +int2d(Th)(nu*dx(v)*dx(vh) + nu*dy(v)*dy(vh) )
+ -int2d(Th)(p*dx(uh))
+ -int2d(Th)(p*dy(vh))
+ -int1d(Th, c2)(nu*dx(u)*N.x*uh+nu*dy(u)*N.y*uh)
+ -int1d(Th, c2)(nu*dx(v)*N.x*vh+nu*dy(v)*N.y*vh)
+ +int2d(Th)(dx(u)*ph + dy(v)*ph)
+ +int2d(Th)(eps*p*ph)
+ +on(c5,c6, u=0, v=0)
+ +on(c1,c3,c4, u=1, v=0);
+ //
+ for (t=0; t<2; t=t+dt) {
+ 	for (int subit=0; subit<3; subit++) {
+ 	
+	 //Th = adaptmesh(Th, [u,v]) ; u = u; v = v;
+	 uold = u;
+	 vold = v;
+	navierstokes;
+	 }
+ 	 //-------------------------------------------------------
+	 //plot(ph,[u,v]);
+	 vort =	dy(u)-dx(v);
+//	plot(vort,WhiteBackground=0,value=1);
+//	Vh Fl=int2d(Th1)(p);
+
+//	 real cir =int1d(Th,c5)(sqrt((N.x)^2+(N.y)^2))*0.5;
+//	 //cout<<"integral over bluff body = "<<cir<<"\n";
+//	 Vh forcex = int1d(Th,c5)(p*N.x+nu*dxx(u)+nu*dyy(u));
+	 //Vh forcey = int1d(Th,c5)(p*N.y)(p*N.x+nu*dxx(u)+nu*dyy(u));+nu*dxx(v)+nu*dyy(v));
+//	 real clift = forcex/cir;
+	 //real cdrag = forcey/cir;
+//	 cout<<" lift = "<<clift<<"\t\t"
+	   //<<" drag = "<<cdrag
+//	     <<"\n";
+        //-------------------------------------------------------- 
+//	{
+	 ofstream f("Vorticity.txt",append);
+	 f<<vort<<endl;
+//	 };
+//	 {
+//	 ofstream f("CLift.txt",append);
+//	 f<<clift<<",";
+//	 };
+	/*
+	ofstream f("CDrag.txt",append);
+	f<<vort(14.5,15)<<",";
+	}; 
+	*/
+        //--------------------------------------------------------
+	//if (it>2200){plot(vort,cmm=" rey = " + 1./nu+" time = "+dt*it,WhiteBackground=0
+	//            ,nbiso=100	
+	//	    ,ps="scc"+it+".png");
+	//	    }
+//        cout<<"\n"<<t<<" iteration(s) over"<<"\n";
+  }
+plot(vort,WhiteBackground=0,value=1);

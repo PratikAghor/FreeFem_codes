@@ -1,0 +1,93 @@
+real taus = 10;
+real dPdL = -9.6;
+real r = 10.;
+
+macro div(u) ( dx(ux)+dy(uy) ) //
+macro StrainRate(u) [2.*dx(ux), 2.*dy(uy), dy(ux)+dx(uy)] //
+
+mesh Th = square(10,10);
+fespace Qh(Th,P1);
+fespace Xh(Th,P2);
+fespace Lh(Th,P1dc);
+Lh TmGxx=0., TmGyy=0., TmGxy=0.;
+Lh Txx=0., Tyy=0., Txy=0.;
+Lh Gdotxx=0., Gdotyy=0., Gdotxy=0.;
+Xh ux,uy,vx,vy,psi,phi,up1,up2;
+Qh p,q;
+real dt=0.1;
+real alpha=1/dt;
+real rho=1;
+
+problem NS([ux,uy,p],[vx,vy,q],init=true) =
+     
+ int2d(Th)(
+         alpha*( ux*vx + uy*vy))
++
+int2d(Th)(  (1/rho)*r*(StrainRate(u)'*StrainRate(v))-(1/rho)*p*div(v) -q*div(u) +1e-10*q*p )
+ // +int2d(Th)( dPdL*vx )
+	+int2d(Th)( [TmGxx,TmGyy,TmGxy]'*[dx(vx),dy(vy),dy(vx)+dx(vy)] )
+
+ + int2d(Th) ( -alpha*convect([up1,up2],-dt,up1)*vx 
+		-alpha*convect([up1,up2],-dt,up2)*vy )
+
+	+on(3,ux=1,uy=0)+on(1,2,4,ux=0,uy=0);
+
+
+problem streamlines(psi,phi) = 
+  int2d(Th)( dx(psi)*dx(phi) + dy(psi)*dy(phi))
++  int2d(Th)( -phi*(dy(ux)-dx(uy)))
++  on(1,2,3,4,psi=0);
+
+for(real t=0;t<5;t=t+dt)
+{
+for(int iter=0; iter<100; ++iter)
+{
+	for(int i=0;i<3;i++)
+	{
+	up1=ux;
+	up2=uy;
+	NS;
+	}
+	Gdotxx = 2.*dx(ux);
+	Gdotyy = 2.*dy(uy);
+	Gdotxy = dx(uy)+dy(ux);
+
+	for(int k=0; k<Lh.ndof; ++k){
+		real TaGxx=Txx[][k]+r*Gdotxx[][k],
+			 TaGyy=Tyy[][k]+r*Gdotyy[][k],
+			 TaGxy=Txy[][k]+r*Gdotxy[][k];
+		real TaGnorm = sqrt( .5*(TaGxx^2+TaGyy^2+2.*TaGxy^2) );
+		real res = TaGnorm-taus;
+		if( 0<res ){
+			real c = r/(1.+r)*res/TaGnorm;
+			real q = 1.-c;
+			Txx[][k] = TaGxx*q;
+			Tyy[][k] = TaGyy*q;
+			Txy[][k] = TaGxy*q;
+
+			q = 1.-2.*c;
+			TmGxx[][k] = TaGxx*q;
+			TmGyy[][k] = TaGyy*q;
+			TmGxy[][k] = TaGxy*q;
+
+		
+		}
+		else {
+			Txx[][k] = TaGxx;
+			Tyy[][k] = TaGyy;
+			Txy[][k] = TaGxy;
+
+			TmGxx[][k] = TaGxx;
+			TmGyy[][k] = TaGyy;
+			TmGxy[][k] = TaGxy;
+			}
+	}
+}
+//plot(ux,dim=2,fill=true,value=true);
+streamlines;
+plot(psi,fill=0,wait=1,ps="psi(taus)"+(taus)+"(t)"+t+".jpg");
+
+}
+
+
+

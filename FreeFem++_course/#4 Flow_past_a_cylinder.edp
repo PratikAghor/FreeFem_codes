@@ -1,0 +1,79 @@
+//Incompressible Navier Stokes Solver in FreeFem++
+ real Re = 600.0;
+ real nu = 1.0/Re;
+ real Lx = 12;
+ real Ly = 5;
+ real dt = 0.5;
+ border c1(t=0,1){x=t*Lx; y=0;}
+ border c2(t=0,1){x=Lx; y=t*Ly;}
+ border c3(t=1,0){x=t*Lx; y=Ly;}
+ border c4(t=1,0){x=0; y=t*Ly;}
+ border c5(t=2*pi,0){x=4+0.2*cos(t); y=Ly/2+0.2*sin(t);}
+ border c6(t=0,1){x=5+Lx/2*t; y=Ly/2+0.4;}
+ border c7(t=0,1){x=5+Lx/2*t; y=Ly/2-0.4;}
+ //
+mesh Th = buildmesh(c1(80)+c2(40)+c3(80)+c4(20)
+ +c5(60)+c6(100)+c7(100));
+ plot(Th);
+ //
+fespace Uh(Th, P2);
+fespace Vh(Th, P1);
+Uh u, v,wx,wy, uh, vh, uold, vold,wxold,wyold;
+Vh p, ph;
+Vh uplot, vplot, vort;
+ //
+ // Velocity field is initialized by steady state solution
+ //
+ real eps = 1e-10;
+ problem steadystokes([u,v,p], [uh,vh,ph]) =
+ int2d(Th)( nu*dx(u)*dx(uh) + nu*dy(u)*dy(uh) )
+ +int2d(Th)(nu*dx(v)*dx(vh) + nu*dy(v)*dy(vh) )
+ -int2d(Th)(p*dx(uh))
+ -int2d(Th)(p*dy(vh))
+ -int1d(Th, c2)(nu*dx(u)*N.x*uh+nu*dy(u)*N.y*uh)
+ -int1d(Th, c2)(nu*dx(v)*N.x*vh+nu*dy(v)*N.y*vh)
+ +int2d(Th)(dx(u)*ph + dy(v)*ph)
+ +int2d(Th)(eps*p*ph)
+ +on(c1, c3, c5, u=0, v=0)
+ +on(c4, u=4.0 * y/Ly * (1-y/Ly), v=0);
+ //
+ steadystokes;
+ uplot = u;
+ vplot = v;
+ plot(Th, [uplot,vplot], nbiso=40, value=1);
+ uold = u;
+ vold = v;
+ //
+ // Now go for unsteady Navier−Stokes equations .
+ //
+ int it = 0;
+ problem navierstokes([u,v,p], [uh,vh,ph], init=it,
+ solver=sparsesolver) =
+ int2d(Th)(u*uh/dt)
+ -int2d(Th)(convect([uold-wxold,vold-wyold], -dt, uold)*uh/dt)
+ +int2d(Th)(v*vh/dt)
+ -int2d(Th)(convect([uold-wxold,vold-wyold], -dt, vold)*vh/dt)
+ +int2d(Th)( nu*dx(u)*dx(uh) + nu*dy(u)*dy(uh) )
+ +int2d(Th)(nu*dx(v)*dx(vh) + nu*dy(v)*dy(vh) )
+ -int2d(Th)(p*dx(uh))
+ -int2d(Th)(p*dy(vh))
+ -int1d(Th, c2)(nu*dx(u)*N.x*uh+nu*dy(u)*N.y*uh)
+ -int1d(Th, c2)(nu*dx(v)*N.x*vh+nu*dy(v)*N.y*vh)
+ +int2d(Th)(dx(u)*ph + dy(v)*ph)
+ +int2d(Th)(eps*p*ph)
+ +on(c1, c3, c5, u=0, v=0)
+ +on(c4, u=4.0 * y/Ly * (1-y/Ly), v=0);
+ //
+for (it=0; it<20; it++) {
+ for (int subit=0; subit<5; subit++) {
+ navierstokes;
+ // Th = adaptmesh(Th, [u,v]) ; u = u; v = v;
+ uold = u;
+ vold = v;
+ }
+ uplot = u;
+ vplot = v;
+ plot(Th, [uplot, vplot], nbiso=60, ps="u_ns_it="+it+".eps");
+ vort = dy(u)-dx(v);
+ plot(vort, nbiso=60, fill=0, ps="vort_ns_it="+it+".eps");
+ }

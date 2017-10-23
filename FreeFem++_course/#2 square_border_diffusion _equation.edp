@@ -1,0 +1,25 @@
+// defining the boundary
+border a(t=0,1){x=t;y=0;}
+border b(t=0,1){x=1;y=t;}
+border c(t=1,0){x=t;y=1;}
+border d(t=1,0){x=0;y=t;}
+
+// the triangulated domain Th is on the left side of its boundary
+ mesh Th = buildmesh (a(50)+b(50)+c(50)+d(50));
+plot(Th,ps="mesh1.jpg");
+//the finite element space defined over Th is called here Vh
+real lambda=5;
+ fespace Vh(Th,P1);
+ Vh u,v; // defines u and v as piecewise-P1 continuous functions
+ func f=-10*(u-lambda*exp(u));// definition of a called f function
+real c1=2;
+ solve Diffusion(u,v) = // defines the PDE
+ int2d(Th)(dx(u)*dx(v) + dy(u)*dy(v)) // bilinear part
+ + int2d(Th)( f*v) // right hand side
+// + on(a,b,c,d,u=0) ; // Dirichlet boundary condition on all 4 sides
+// plot(u, ps="dirichlet_all.jpg",fill=1);
+//+int1d(Th,c)(c1*v)
+//+on(a,b,d,u=0);
+;
+plot(u, ps="c_neumann.jpg",fill=1);
+
